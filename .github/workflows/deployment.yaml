@@ -1,75 +1,43 @@
-name: Deploy Conduit to VM
+name: CI/CD Pipeline - AWS ECS
 
 on:
   push:
     branches:
       - main
-      - feature
-  workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-      # 1️⃣ Checkout repository 
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      # 2️⃣ Login in GitHub Container Registry
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: eu-central-1
 
-      # 3️⃣ Backend-Image build & push
-      - name: Build & push backend
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./backend/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/a-marbach/conduit-backend:${{ github.sha }}
+    - name: Login to Amazon ECR
+      id: ecr
+      uses: aws-actions/amazon-ecr-login@v1
 
-      # 4️⃣ Frontend-Image build & push
-      - name: Build & push frontend
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/a-marbach/conduit-frontend:${{ github.sha }}
-      # 5️⃣ Setup SSH key
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-      # 6️⃣ Copy compose to server
-      - name: Copy compose to server
-        run: |
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $GITHUB_WORKSPACE/docker-compose.yaml ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/conduit-container/
+    - name: Build & push Backend image
+      run: |
+        docker build -t conduit-backend ./backend
+        docker tag conduit-backend:latest ${{ steps.ecr.outputs.registry }}/conduit-backend:latest
+        docker push ${{ steps.ecr.outputs.registry }}/conduit-backend:latest
 
-      # 7️⃣ Deploy to VM via SSH
-      - name: Deploy to VM via SSH
-        uses: appleboy/ssh-action@v1.2.2
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            set -e
-            cd ~/conduit-container
-            export FRONTEND_VERSION=${{ github.sha }}
-            export BACKEND_VERSION=${{ github.sha }}
-            docker-compose pull
-            docker-compose down
-            docker-compose up -d --force-recreate
-            docker image prune -f
+    - name: Build & push Frontend image
+      run: |
+        docker build -t conduit-frontend ./frontend
+        docker tag conduit-frontend:latest ${{ steps.ecr.outputs.registry }}/conduit-frontend:latest
+        docker push ${{ steps.ecr.outputs.registry }}/conduit-frontend:latest
+
+    - name: Update ECS service
+      run: |
+        aws ecs update-service \
+          --cluster conduit-cluster \
+          --service conduit-task-service-727a76rm \
+          --force-new-deployment
