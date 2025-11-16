@@ -11,7 +11,7 @@ It serves as an example of containerization, AWS deployment, and can later be ex
     - [Restarting and Stopping Containers](#restarting-and-stopping-containers)
 - [Security](#security)
 - [AWS ECS Deployment](#aws-ecs-deployment)
-- [CI/CD Pipeline](#ci/cd-pipeline)
+- [CI/CD Pipeline](#cicd-pipeline)
 - [Extras](#extras)
 
 ## Quickstart
