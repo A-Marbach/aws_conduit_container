@@ -40,5 +40,5 @@ jobs:
         aws ecs update-service \
           --cluster conduit-cluster \
           --service conduit-task-service-727a76rm \
-          --force-new-deployment
+          --force-new-deployment \
           --region eu-north-1
