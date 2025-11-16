@@ -126,7 +126,7 @@ docker push <aws_account_id>.dkr.ecr.<region>.amazonaws.com/conduit-frontend:lat
 * Frontend URL: http://<Fargate_Public_IP>/
 * Backend API: http://<Fargate_Public_IP>:5000/
 
-## CI/CD Pipeline
+### CI/CD Pipeline
 
 **Trigger:** Push to `main`
 - **Steps:**  
