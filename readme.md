@@ -126,6 +126,17 @@ docker push <aws_account_id>.dkr.ecr.<region>.amazonaws.com/conduit-frontend:lat
 * Frontend URL: http://<Fargate_Public_IP>/
 * Backend API: http://<Fargate_Public_IP>:5000/
 
+## CI/CD Pipeline
+
+**Trigger:** Push to `main`
+- **Steps:**  
+  1. Checkout repository  
+  2. Load AWS credentials from GitHub Secrets  
+  3. Build Docker images for backend & frontend  
+  4. Push images to Amazon ECR  
+  5. Update ECS service (deploy new images)  
+- **Region:** eu-north-1  
+
 
 
 ### Extras
